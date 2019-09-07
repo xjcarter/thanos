@@ -1,0 +1,16 @@
+thanos.py 
+monitors the deviation of price relative to its 200dayMA
+calcs log returns and determines it zscore based on the last 100 observations
+
+works in two modes
+1. monitor mode - read a universe file (universe.txt) 
+   here it alerts via email if any name within the universe show extreme deviations with the last week
+   USAGE: python thanos.py
+
+2. singular mode - takes a symbol at the command line and outputs all calcs + charts
+   lists last 10 days of calculations to stdout 
+   USAGE: python thanos.py AAPL
+
+
+./thanos_data: holds all CSV downloads data, and derived data file
+./thanos_charts: all PNG files created 
