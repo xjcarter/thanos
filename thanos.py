@@ -39,7 +39,7 @@ EMAIL_HEADER = """
 
     Where:
 
-      Deviation = log( [price - ma200]/ma200 )
+      Deviation = log( price/ma200 )
       Zscore    = [Current Deviation - 100dayAverage(Deviation)] / 100daySTDEV(Deviation)
     
     Downside Tails ( prob < 0.15 ): Signal good long term entry points
