@@ -8,6 +8,7 @@ import mail_client
 
 import math
 import pandas
+import pathlib
 import numpy as np
 import seaborn as sns
 import datetime as dt
@@ -163,9 +164,9 @@ def send_heartbeat(uni):
         mail_client.mail('xjcarter@gmail.com','THANOS Heartbeat FAILURE! Check Process!',text=uni_list)
 
 
-def get_universe():
+def get_universe(fn=UNIVERSE_FILE):
 
-    univ = [line.strip() for line in open(UNIVERSE_FILE)]
+    univ = [line.strip() for line in open(fn)]
     return univ
 
 
@@ -208,8 +209,12 @@ def evaluate(symbol):
         return
 
     zz, chart = thanosize(symbol,df)
+    
+    ## tag each dataframe when printing to stdout
+    tagged = zz.copy()
+    tagged['symbol'] = symbol
+    print(tagged.tail(10))
 
-    print(zz.tail(10))
     if chart is not None: chart.show()
 
 
@@ -238,10 +243,15 @@ if __name__ == "__main__":
     ##        if no symbol given - does monitoring on all the names the universe file thanos.csv
     ##        with a symbol given - does all the analytics, dumps the output and chart the data
 
+    symbol_list = None
     if len(sys.argv) > 1:
-        symbol_list = sys.argv[1].split(',')
+        ## use a universe file
+        if pathlib.Path(sys.argv[1]).is_file():
+            symbol_list = get_universe(sys.argv[1])
+        else:
+        ## or use commna separated string
+            symbol_list = sys.argv[1].split(',')
+
         for symbol in symbol_list:
             print(f'running thanos on: {symbol}') 
             evaluate(symbol)
-    else:
-        monitor_universe() 
