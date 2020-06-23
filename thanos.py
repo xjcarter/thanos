@@ -200,6 +200,17 @@ def thanosize(symbol,df,show_charts=False):
     df['z_score'] = (df['dev'] - df['dev'].rolling(100).mean())/df['dev'].rolling(100).std()
     df['prob'] = df['z_score'].map(st.norm.cdf)
 
+    """
+    df['prev'] = df['close'].shift(1)
+    df['tr'] = df.apply(lambda x: max(x['high'] - x['low'],x['high']-x['prev'],x['prev']-x['low']),axis=1)
+    df['atr'] = df['tr'].rolling(20).mean()
+
+    df['low20'] = df['low'].rolling(20).min()
+    df['stopATRs'] = (df['high'] - df['low20'])/df['atr']
+    df['threeATRs'] = 3 * df['atr']
+    zz = df[['date',CLOSE,'ma200','dev','z_score','prob','atr','low20','stopATRs','threeATRs']]
+    """
+
     zz = df[['date',CLOSE,'ma200','dev','z_score','prob']]
     zfile = THANOS_DATA + f'thanos_{symbol}_ztest.csv'
     zz.to_csv(zfile,index=False)
