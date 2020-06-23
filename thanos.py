@@ -210,12 +210,12 @@ def evaluate(symbol):
 
     zz, chart = thanosize(symbol,df)
     
-    ## tag each dataframe when printing to stdout
+    ## tag each dataframe with the symbol evaluated 
     tagged = zz.copy()
     tagged['symbol'] = symbol
-    print(tagged.tail(10))
 
-    if chart is not None: chart.show()
+    return tagged, chart
+
 
 
 def monitor_universe():
@@ -244,6 +244,8 @@ if __name__ == "__main__":
     ##        with a symbol given - does all the analytics, dumps the output and chart the data
 
     symbol_list = None
+    composite = list() 
+    header = None
     if len(sys.argv) > 1:
         ## use a universe file
         if pathlib.Path(sys.argv[1]).is_file():
@@ -254,4 +256,17 @@ if __name__ == "__main__":
 
         for symbol in symbol_list:
             print(f'running thanos on: {symbol}') 
-            evaluate(symbol)
+            metrics, chart = evaluate(symbol)
+    
+            if metrics is not None:
+                if header is None: header = metrics.columns
+                print(metrics.tail(10))
+                composite.append(metrics.iloc[-1].tolist())
+
+            #if chart is not None: chart.show()
+
+        comp_df = pandas.DataFrame(columns=header,data=composite)
+        comp_df['Composite'] = True
+
+        print("\nComposite Table:")
+        print(comp_df)
