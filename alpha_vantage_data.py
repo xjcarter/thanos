@@ -3,6 +3,7 @@ import pandas
 import os.path
 
 # standard functions to grab and save ticker data from alpha_advantange
+# pip install alpha-vantage
 # look at alpha_advantange_data_test.py for example usage
 
 # fetch data for a symbol
@@ -22,11 +23,17 @@ def fetch_data(symbol, mode=FULL):
     return data, meta_data
 
 
+def cvt_timestamp(ts):
+    if isinstance(ts,str):
+        return ts
+    return ts.strftime("%Y-%m-%d")
+
 # takes a current file built by this library and concats the new data
 
 def update_data(symbol, csv_history_file):
 
     h, new_df = None, None
+    
 
     fetch_mode = COMPACT 
 
@@ -42,19 +49,24 @@ def update_data(symbol, csv_history_file):
 
     try:
         new_data, _ = fetch_data(symbol, mode=fetch_mode)
-    except:
+        new_data['date'] = new_data['date'].map(cvt_timestamp)
+    except Exception as e:
         print(f'ERROR: could not fetch new data for {symbol}.')
+        print(e)
         return 
 
     try:
         if h is not None:
             new_df = pandas.concat([h,new_data])
+            new_df = new_df.sort_values(by=['date'],ascending=[1])
             new_df = new_df.drop_duplicates(['date'],keep='last')
         else:
-            new_df = new_data
+            new_df = new_data.sort_values(by=['date'],ascending=[1])
     except:
         print(f'ERROR: merge for {symbol} to {csv_history_file} failed.')
         return
+
+    new_df = new_df.reset_index(drop=True)
 
     try:
         if h is not None:

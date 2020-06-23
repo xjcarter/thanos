@@ -1,12 +1,21 @@
 
-## STOCK DEVATION TRACKER 
+##t STOCK DEVATION TRACKER 
 ## Tracks the tails in the devation of price from the 200dayMA
 ## Charts the 50day and 200day views of price versus the 200dayMA
 ## Sends an email when the deviation has moved beyond the 15% or 85% percentile (on z-score)
 
+## 06/23/2020
+## modified the script to take a universe file on a string of stocks at the commmand line
+## it also creates a composite file that gives all the current metrics fro the universe being analyzed.
+## Usage:  python3 thanos.py <universe_file OR 'sym1,sym2,sym3'> <tag to save the file>
+##         i.e.  python3 thanos.py new_universe.txt ./composites/new_univ ## composite saved to ./composites/new_univ_{date}.csv
+##               python3 thanos.py 'IVV,SPY,IAU'  ## dataframes just dumped to stdout
+##               python3 thanos.py 'IVV,SPY,AAPL' ./composites/mylist ## composites saved to ./composites/mylist_{date}.csv
+
+
 import mail_client
 
-import math
+import math, datetime
 import pandas
 import pathlib
 import numpy as np
@@ -52,6 +61,9 @@ EMAIL_HEADER = """
  
 def get_data(symbol):
     
+    ## sleep between data calls - only allowed 5 calls per minute and 500 calls per day.
+    time.sleep(13)
+
     data = None 
     try:
         hist_file = THANOS_DATA + f'thanos_{symbol}.csv'
@@ -164,9 +176,9 @@ def send_heartbeat(uni):
         mail_client.mail('xjcarter@gmail.com','THANOS Heartbeat FAILURE! Check Process!',text=uni_list)
 
 
-def get_universe(fn=UNIVERSE_FILE):
+def get_universe(universe_fn):
 
-    univ = [line.strip() for line in open(fn)]
+    univ = [line.strip() for line in open(universe_fn)]
     return univ
 
 
@@ -203,27 +215,34 @@ def thanosize(symbol,df,show_charts=False):
 
 
 def evaluate(symbol):
-    df = get_data(symbol) 
-    if df is None:
-        print(f'ERROR: {symbol} data fetch error.')
-        return
 
-    zz, chart = thanosize(symbol,df)
-    
-    ## tag each dataframe with the symbol evaluated 
-    tagged = zz.copy()
-    tagged['symbol'] = symbol
+    tagged = chart = None
+    try:
+        df = get_data(symbol) 
+
+        if df is None:
+            print(f'ERROR: {symbol} data fetch error.')
+            return
+
+        zz, chart = thanosize(symbol,df)
+        
+        ## tag each dataframe with the symbol evaluated 
+        tagged = zz.copy()
+        tagged['symbol'] = symbol
+    except:
+        print(f'ERROR: Failed to analyze {symbol}.')
+        
 
     return tagged, chart
 
 
+## created to do passive / email based monitoring
 
-def monitor_universe():
+def monitor_universe(universe_fn):
 
-    uni = get_universe() 
+    uni = get_universe(universe_fn) 
     for symbol in uni:
 
-        time.sleep(9)
         df = get_data(symbol) 
         if df is None:
             print(f'ERROR: {symbol} data fetch error.')
@@ -261,12 +280,30 @@ if __name__ == "__main__":
             if metrics is not None:
                 if header is None: header = metrics.columns
                 print(metrics.tail(10))
-                composite.append(metrics.iloc[-1].tolist())
+
+                if len(composite) < 500:
+                    ## alpha_vantage FREE service limits you to 500 calls a day.
+                    composite.append(metrics.iloc[-1].tolist())
+                else:
+                    print('cannot append {symbol} - 500 symbol data retrieval limit exceeded')
 
             #if chart is not None: chart.show()
 
+
         comp_df = pandas.DataFrame(columns=header,data=composite)
         comp_df['Composite'] = True
+        comp_df = comp_df.sort_values(['z_score'])
 
         print("\nComposite Table:")
         print(comp_df)
+
+        if comp_df is not None:
+            ## save composite file to the desired directory
+            destination= './'
+            if len(sys.argv) > 2: destination = sys.argv[2] + "/" 
+            curr_date = datetime.datetime.now().date().strftime("%Y%m%d")
+            if not pathlib.Path(destination).exists():
+                import os
+                os.makedirs(destination)
+            current_comp_file = f'{destination}{curr_date}.csv'
+            comp_df.to_csv(current_comp_file,index=False)
