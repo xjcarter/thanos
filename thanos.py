@@ -22,7 +22,7 @@ sns.set()
 ## universe file for all symbols monitored
 ## one symbol per line
 
-HOME = '/Users/jamescarter/sandbox/thanos'
+HOME = '/home/jcarter/sandbox/trading/thanos'
 UNIVERSE_FILE = f'{HOME}/universe.txt'
 THANOS_DATA = f'{HOME}/thanos_data/'
 THANOS_CHARTS = f'{HOME}/thanos_charts/'
@@ -50,7 +50,7 @@ EMAIL_HEADER = """
 
  
 def get_data(symbol):
-
+    
     data = None 
     try:
         hist_file = THANOS_DATA + f'thanos_{symbol}.csv'
@@ -60,8 +60,15 @@ def get_data(symbol):
          
     return data 
 
+def cvt_date(date_obj):
+    if isinstance(date_obj, basestring):
+        return dt.datetime.strptime(date_obj,"%Y-%m-%d").date()
+    else:
+        return date_obj.date()
 
 def plot(symbol, dts, a, b):
+
+    return None 
 
     current_date = dts.iloc[-1]
 
@@ -75,7 +82,8 @@ def plot(symbol, dts, a, b):
         plt.title("%s %s: %d days" % (symbol,current_date,N))
 
         plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%m_%d'))
-        u = [dt.datetime.strptime(d,'%Y-%m-%d').date() for d in dates.tolist()]
+        #u = [dt.datetime.strptime(d,'%Y-%m-%d').date() for d in dates.tolist()]
+        u = [cvt_date(d) for d in dates.tolist()]
 
         plt.plot(u, s1)
         plt.plot(u, s2)
@@ -161,7 +169,7 @@ def get_universe():
     return univ
 
 
-def thanosize(symbol,df):
+def thanosize(symbol,df,show_charts=False):
 
     CLOSE = 'close'
     #CLOSE = 'adjusted_close'
@@ -184,9 +192,11 @@ def thanosize(symbol,df):
     zz.to_csv(zfile,index=False)
 
     ## save the chart and clear it.
-    chart_file = THANOS_CHARTS + f'thanos_{symbol}.png'
-    chart = plot(symbol,zz.date,zz[CLOSE],zz.ma200)
-    chart.savefig(chart_file)
+    chart = None
+    if show_charts:
+        chart_file = THANOS_CHARTS + f'thanos_{symbol}.png'
+        chart = plot(symbol,zz.date,zz[CLOSE],zz.ma200)
+        if chart is not None: chart.savefig(chart_file)
 
     return zz,chart
 
@@ -200,7 +210,7 @@ def evaluate(symbol):
     zz, chart = thanosize(symbol,df)
 
     print(zz.tail(10))
-    chart.show()
+    if chart is not None: chart.show()
 
 
 def monitor_universe():
@@ -214,11 +224,11 @@ def monitor_universe():
             print(f'ERROR: {symbol} data fetch error.')
         else:
             zz, chart = thanosize(symbol,df)
-            chart.clf()
-            send_alert(symbol,zz,0.15,0.85)
+            if chart is not None: chart.clf()
+            # send_alert(symbol,zz,0.15,0.85)
 
     # send heartbeat every 5 days since last update  
-    send_heartbeat(uni)
+    # send_heartbeat(uni)
 
 
 
@@ -229,8 +239,9 @@ if __name__ == "__main__":
     ##        with a symbol given - does all the analytics, dumps the output and chart the data
 
     if len(sys.argv) > 1:
-        symbol = sys.argv[1]
-        print(f'running thanos on: {symbol}') 
-        evaluate(symbol)
+        symbol_list = sys.argv[1].split(',')
+        for symbol in symbol_list:
+            print(f'running thanos on: {symbol}') 
+            evaluate(symbol)
     else:
         monitor_universe() 

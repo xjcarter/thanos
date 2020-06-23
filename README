@@ -7,10 +7,21 @@ works in two modes
    here it alerts via email if any name within the universe show extreme deviations with the last week
    USAGE: python thanos.py
 
-2. singular mode - takes a symbol at the command line and outputs all calcs + charts
+2. list mode - takes a comma separated list of symbols at the command line and outputs all calcs + charts
    lists last 10 days of calculations to stdout 
-   USAGE: python thanos.py AAPL
+   USAGE: python thanos.py AAPL,IBM,IVV
 
 
 ./thanos_data: holds all CSV downloads data, and derived data file
 ./thanos_charts: all PNG files created 
+
+
+# 06/23/2020
+
+- adding list mode to thanos.py
+- trading strategy idea:
+    = go to finviz and find all the ETFs that are making 52week highs.
+    = export finviz list
+    = feed a string of the list to thanos. - look for the names that are not overextended.
+
+    
