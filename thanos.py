@@ -197,21 +197,38 @@ def thanosize(symbol,df,show_charts=False):
 
     ## calc Zscore
 
-    df['z_score'] = (df['dev'] - df['dev'].rolling(100).mean())/df['dev'].rolling(100).std()
-    df['prob'] = df['z_score'].map(st.norm.cdf)
+    df['Zscore'] = (df['dev'] - df['dev'].rolling(100).mean())/df['dev'].rolling(100).std()
+    df['prob'] = df['Zscore'].map(st.norm.cdf)
 
-    """
+
+    ## 20 day low
+    df['low20'] = df['low'].rolling(20).min()
+    
+    ## new 200day high 
+
+    df['hi200'] = df['high'].rolling(200).max()
+    df['NewH'] = df.apply(lambda x: 'NH' if x['high'] >= x['hi200'] else '',axis=1)
+
+
+    ## daily price volatility stats 
+
     df['prev'] = df['close'].shift(1)
     df['tr'] = df.apply(lambda x: max(x['high'] - x['low'],x['high']-x['prev'],x['prev']-x['low']),axis=1)
-    df['atr'] = df['tr'].rolling(20).mean()
+    df['atr20'] = df['tr'].rolling(20).mean()
+    df['ATRsToLow'] = (df['close'] - df['low20'])/df['atr20']
+    df['threeATRs'] = 3 * df['atr20']
+    
+    ## 20day price change stats
 
-    df['low20'] = df['low'].rolling(20).min()
-    df['stopATRs'] = (df['high'] - df['low20'])/df['atr']
-    df['threeATRs'] = 3 * df['atr']
-    zz = df[['date',CLOSE,'ma200','dev','z_score','prob','atr','low20','stopATRs','threeATRs']]
-    """
+    df['mo20'] = df[CLOSE]-df[CLOSE].shift(20)
 
-    zz = df[['date',CLOSE,'ma200','dev','z_score','prob']]
+    ## standard dev of 20day price change
+
+    df['stdMove'] = df['mo20'].rolling(100).std()
+
+
+    zz = df[['date',CLOSE,'high','ma200','dev','Zscore','prob','NewH','low20','ATRsToLow','atr20','threeATRs','stdMove']]
+
     zfile = THANOS_DATA + f'thanos_{symbol}_ztest.csv'
     zz.to_csv(zfile,index=False)
 
@@ -228,20 +245,20 @@ def thanosize(symbol,df,show_charts=False):
 def evaluate(symbol):
 
     tagged = chart = None
-    try:
-        df = get_data(symbol) 
+    #try:
+    df = get_data(symbol) 
 
-        if df is None:
-            print(f'ERROR: {symbol} data fetch error.')
-            return
+    if df is None:
+        print(f'ERROR: {symbol} data fetch error.')
+        return tagged, chart
 
-        zz, chart = thanosize(symbol,df)
-        
-        ## tag each dataframe with the symbol evaluated 
-        tagged = zz.copy()
-        tagged['symbol'] = symbol
-    except:
-        print(f'ERROR: Failed to analyze {symbol}.')
+    zz, chart = thanosize(symbol,df)
+    
+    ## tag each dataframe with the symbol evaluated 
+    tagged = zz.copy()
+    tagged['symbol'] = symbol
+    #except:
+    #    print(f'ERROR: Failed to analyze {symbol}.')
         
 
     return tagged, chart
@@ -303,7 +320,7 @@ if __name__ == "__main__":
 
         comp_df = pandas.DataFrame(columns=header,data=composite)
         comp_df['Composite'] = True
-        comp_df = comp_df.sort_values(['z_score'])
+        comp_df = comp_df.sort_values(['Zscore'])
 
         print("\nComposite Table:")
         print(comp_df)
